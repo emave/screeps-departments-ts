@@ -121,6 +121,38 @@ export class Worker implements IWorker {
   }
 
   findConstructionSite(): ConstructionSite | null {
+    // Priority list for construction sites (highest to lowest priority)
+    const constructionPriority: StructureConstant[] = [
+      STRUCTURE_SPAWN,           // 1. Spawns - critical for creep production
+      STRUCTURE_EXTENSION,       // 2. Extensions - increase energy capacity
+      STRUCTURE_TOWER,           // 3. Towers - defense
+      STRUCTURE_STORAGE,         // 4. Storage - energy management
+      STRUCTURE_CONTAINER,       // 5. Containers - energy storage near sources
+      STRUCTURE_EXTRACTOR,       // 6. Extractors - mineral harvesting
+      STRUCTURE_TERMINAL,        // 7. Terminal - trade and resource transfer
+      STRUCTURE_LINK,            // 8. Links - energy transfer
+      STRUCTURE_OBSERVER,        // 9. Observer - vision
+      STRUCTURE_POWER_SPAWN,     // 10. Power Spawn - power processing
+      STRUCTURE_LAB,             // 11. Labs - resource processing
+      STRUCTURE_NUKER,           // 12. Nuker - offensive capability
+      STRUCTURE_FACTORY,         // 13. Factory - commodity production
+      STRUCTURE_WALL,            // 14. Walls - defense structures
+      STRUCTURE_RAMPART,         // 15. Ramparts - defense structures
+      STRUCTURE_ROAD             // 16. Roads - lowest priority (infrastructure)
+    ];
+
+    // Search for construction sites by priority
+    for (const structureType of constructionPriority) {
+      const sites = this.creep.room.find(FIND_CONSTRUCTION_SITES, {
+        filter: (site) => site.structureType === structureType
+      });
+
+      if (sites.length > 0) {
+        return this.creep.pos.findClosestByPath(sites) || sites[0];
+      }
+    }
+
+    // Fallback: find any construction site if none match the priority list
     let site = this.creep.pos.findClosestByPath(FIND_CONSTRUCTION_SITES);
     if (!site) {
       const sites = this.creep.room.find(FIND_CONSTRUCTION_SITES);

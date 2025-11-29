@@ -16,7 +16,7 @@ export class BuildingDepartment implements Department {
   defaultWorkerBody: BodyPartConstant[] = [WORK, CARRY, MOVE];
   private materialsPercentage: number = 0.4;
   private static readonly MEMORY_KEY = "buildingDepartment";
-  private static readonly MAX_CIRCLE_RADIUS = 8;
+  private static readonly MAX_CIRCLE_RADIUS = 3;
 
   constructor(maxWorkersCount?: number, defaultWorkerBody?: BodyPartConstant[]) {
     if (maxWorkersCount) {
@@ -149,6 +149,7 @@ export class BuildingDepartment implements Department {
     for (const spawnName in Game.spawns) {
       const spawn = Game.spawns[spawnName];
       this.planAroundSpawn(spawn);
+      this.planRoadsToResources(spawn);
     }
   }
 
@@ -307,6 +308,121 @@ export class BuildingDepartment implements Department {
       // Too many construction sites, will retry next tick
     } else if (result === ERR_RCL_NOT_ENOUGH) {
       // Room Controller Level not high enough
+    }
+  }
+
+  /**
+   * Plan roads from the outer circle to sources and controller
+   */
+  private planRoadsToResources(spawn: StructureSpawn): void {
+    const room = Game.rooms[spawn.room.name];
+    if (!room) {
+      return;
+    }
+
+    const memory = this.getMemory();
+    const roadKey = `${spawn.name}_roads`;
+
+    // Check if we've already planned roads for this spawn
+    if (memory.plannedPositions && memory.plannedPositions[roadKey]) {
+      return;
+    }
+
+    // Find all sources in the room
+    const sources = room.find(FIND_SOURCES);
+
+    // Find controller
+    const controller = room.controller;
+
+    // Get positions on the third road circle (radius 3, 6, or 9) as starting points
+    // Use the innermost road circle (radius 3) to start roads to resources
+    const roadCirclePositions = this.getCirclePositions(spawn.pos, 3);
+
+    // Plan roads to each source
+    for (const source of sources) {
+      this.planRoadPath(roadCirclePositions, source.pos);
+    }
+
+    // Plan road to controller if it exists
+    if (controller) {
+      this.planRoadPath(roadCirclePositions, controller.pos);
+    }
+
+    // Mark roads as planned
+    if (!memory.plannedPositions) {
+      memory.plannedPositions = {};
+    }
+    memory.plannedPositions[roadKey] = true;
+    this.setMemory(memory);
+  }
+
+  /**
+   * Plan a road path from the outer circle to a target position
+   */
+  private planRoadPath(startPositions: RoomPosition[], target: RoomPosition): void {
+    const room = Game.rooms[target.roomName];
+    if (!room) {
+      return;
+    }
+
+    // Find the closest position on the outer circle to the target
+    let closestPos: RoomPosition | null = null;
+    let minDistance = Infinity;
+
+    for (const pos of startPositions) {
+      const distance = pos.getRangeTo(target);
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestPos = pos;
+      }
+    }
+
+    if (!closestPos) {
+      return;
+    }
+
+    // Use PathFinder to find the path
+    const result = PathFinder.search(
+      closestPos,
+      { pos: target, range: 1 },
+      {
+        plainCost: 2,
+        swampCost: 10,
+        roomCallback: (roomName: string) => {
+          const room = Game.rooms[roomName];
+          if (!room) return false;
+
+          const costs = new PathFinder.CostMatrix();
+
+          // Mark existing structures as obstacles (except roads)
+          room.find(FIND_STRUCTURES).forEach(struct => {
+            if (struct.structureType !== STRUCTURE_ROAD && struct.structureType !== STRUCTURE_CONTAINER) {
+              costs.set(struct.pos.x, struct.pos.y, 0xff);
+            }
+          });
+
+          // Mark construction sites as obstacles (except roads)
+          room.find(FIND_CONSTRUCTION_SITES).forEach(site => {
+            if (site.structureType !== STRUCTURE_ROAD) {
+              costs.set(site.pos.x, site.pos.y, 0xff);
+            }
+          });
+
+          return costs;
+        }
+      }
+    );
+
+    // Place road construction sites along the path
+    if (!result.incomplete) {
+      for (const pos of result.path) {
+        // Skip if too close to target (within 1 tile)
+        if (pos.getRangeTo(target) <= 1) {
+          continue;
+        }
+
+        this.placeConstructionSite(pos, STRUCTURE_ROAD);
+      }
     }
   }
 }
