@@ -5,30 +5,39 @@ import { Department } from "../../parts/department";
 import { Harvester, IHarvester } from "./harvester";
 
 export class HarvestingDepartment implements Department {
-    supposedWorkersCount: number = 2;
+    maxWorkersCount: number = 0;
     defaultWorkerBody: BodyPartConstant[] = [WORK, CARRY, MOVE];
-    private availableMaterialsPercentage: number = 0.5;
+    private materialsPercentage: number = 0.4;
     private static readonly MEMORY_KEY = 'harvestingDepartment';
 
-    constructor(supposedWorkersCount?: number, defaultWorkerBody?: BodyPartConstant[]) {
-        if (supposedWorkersCount) {
-            this.supposedWorkersCount = supposedWorkersCount;
+    constructor(maxWorkersCount?: number, defaultWorkerBody?: BodyPartConstant[]) {
+        if (maxWorkersCount) {
+            this.maxWorkersCount = maxWorkersCount;
         }
         if (defaultWorkerBody) {
             this.defaultWorkerBody = defaultWorkerBody;
         }
 
         // Initialize default memory if it doesn't exist
-        if (!Memory[HarvestingDepartment.MEMORY_KEY]) {
-            Memory[HarvestingDepartment.MEMORY_KEY] = {
-                supposedWorkersCount: this.supposedWorkersCount,
-                availableMaterialsPercentage: this.availableMaterialsPercentage,
-                lastSpawnTime: 0
+        if (!Memory.departments?.[HarvestingDepartment.MEMORY_KEY]) {
+            Memory.departments = Memory.departments || {};
+            Memory.departments[HarvestingDepartment.MEMORY_KEY] = {
+                priority: 1,
+                maxWorkersCount: this.maxWorkersCount,
+                materialsPercentage: this.materialsPercentage
             };
         }
     }
 
+    updateStateFromMemory(): void {
+        const memory = this.getMemory();
+        this.maxWorkersCount = memory.maxWorkersCount || this.maxWorkersCount;
+        this.materialsPercentage = memory.materialsPercentage || this.materialsPercentage;
+    }
+
     run(): void {
+        this.updateStateFromMemory();
+
         // Spawn workers if needed
         this.spawnBestWorkerPossible();
 
@@ -47,7 +56,7 @@ export class HarvestingDepartment implements Department {
             const spawn = Game.spawns[spawnName];
             totalEnergy += spawn.store.getUsedCapacity(RESOURCE_ENERGY);
         }
-        return Math.floor(totalEnergy * this.availableMaterialsPercentage);
+        return Math.floor(totalEnergy * this.materialsPercentage);
     }
 
     getWorkers(): IHarvester[] {
@@ -65,6 +74,7 @@ export class HarvestingDepartment implements Department {
         const availableEnergy = this.getAvailableMaterials();
         const upgradedBody = this.getAnUpgradedWorkerBody();
         const upgradedCost = this.calculateBodyCost(upgradedBody);
+        console.log(`Checking if new harvester can be upgraded. Available energy: ${availableEnergy}, Upgraded cost: ${upgradedCost}`);
         return availableEnergy >= upgradedCost;
     }
 
@@ -101,13 +111,12 @@ export class HarvestingDepartment implements Department {
                 }
             }
         }
-
         return upgradedBody;
     }
 
     spawnBestWorkerPossible(): void {
         const workers = this.getWorkers();
-        if (workers.length >= this.supposedWorkersCount) {
+        if (workers.length >= this.maxWorkersCount) {
             return;
         }
 
@@ -142,19 +151,19 @@ export class HarvestingDepartment implements Department {
         }
     }
 
-    setAvailableMaterialsPercentage(percentage: number): void {
-        this.availableMaterialsPercentage = Math.max(0, Math.min(1, percentage));
+    setMaterialsPercentage(percentage: number): void {
+        this.materialsPercentage = Math.max(0, Math.min(1, percentage));
     }
 
     setMemory(memory: any): void {
-        Memory[HarvestingDepartment.MEMORY_KEY] = {
-            ...Memory[HarvestingDepartment.MEMORY_KEY],
+        Memory.departments[HarvestingDepartment.MEMORY_KEY] = {
+            ...Memory.departments[HarvestingDepartment.MEMORY_KEY],
             ...memory
         };
     }
 
     getMemory(): any {
-        return Memory[HarvestingDepartment.MEMORY_KEY] || {};
+        return Memory.departments[HarvestingDepartment.MEMORY_KEY] || {};
     }
 
     private calculateBodyCost(body: BodyPartConstant[]): number {

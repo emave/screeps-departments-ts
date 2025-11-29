@@ -1,17 +1,15 @@
+import { BuildingDepartment } from "departments/building/building.department";
+import { CommunityDepartment } from "departments/community/community.department";
 import { HarvestingDepartment } from "departments/harvesting/hervest.department";
-import { CreepTask, DepartmentTypes } from "parts/types";
+import { UpgradingDepartment } from "departments/upgrading/upgrading.department";
+import { CreepTask, DepartmentsMemory, DepartmentTypes } from "parts/types";
 import { ErrorMapper } from "utils/ErrorMapper";
 
 declare global {
   interface Memory {
     uuid: number;
     log: any;
-    harvestingDepartment?: {
-      supposedWorkersCount: number;
-      availableMaterialsPercentage: number;
-      lastSpawnTime: number;
-      [key: string]: any;
-    };
+    departments: DepartmentsMemory;
   }
 
   interface CreepMemory {
@@ -34,6 +32,15 @@ declare global {
 export const loop = ErrorMapper.wrapLoop(() => {
   console.log(`Current game tick is ${Game.time}`);
 
+  const communityDepartment = new CommunityDepartment();
+  communityDepartment.run();
+
   const harvestingDepartment = new HarvestingDepartment();
   harvestingDepartment.run();
+
+  const buildingDepartment = new BuildingDepartment();
+  buildingDepartment.run();
+
+  const upgradingDepartment = new UpgradingDepartment();
+  upgradingDepartment.run();
 });

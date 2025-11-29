@@ -3,15 +3,19 @@ import { IWorker, Worker } from "parts/worker";
 
 export interface IHarvester extends IWorker {
   findClosestSource(): Source;
-  findStructureInNeed(): AnyStructure;
+  findStructureInNeed(): AnyStructure | null;
+  findConstructionSite(): ConstructionSite | null;
+  findControllerToUpgrade(): StructureController | null;
 
   harvest(source: Source): void;
+  build(site: ConstructionSite): void;
+  upgradeController(controller: StructureController): void;
 }
 
 const structurePriority = {
   [STRUCTURE_EXTENSION]: 1,
   [STRUCTURE_SPAWN]: 2,
-  [STRUCTURE_TOWER]: 3
+  [STRUCTURE_TOWER]: 3,
 };
 
 type StructureTypes = StructureExtension | StructureSpawn | StructureTower;
@@ -29,7 +33,7 @@ export class Harvester extends Worker implements IHarvester {
     super(creep);
 
     const memory = this.getMemory();
-    this.task = memory.task;
+    this.task = memory.task as HarvesterTasks;
   }
 
   run(): void {
@@ -38,6 +42,12 @@ export class Harvester extends Worker implements IHarvester {
       case HarvesterTasks.Harvesting:
         this.harvestTask();
         break;
+      case HarvesterTasks.Building:
+        this.buildTask();
+        break;
+      case HarvesterTasks.Upgrading:
+        this.upgradeTask();
+        break;
       default:
         console.log(`Unknown task for harvester ${this.creep.name}: ${this.task}`);
     }
@@ -45,9 +55,23 @@ export class Harvester extends Worker implements IHarvester {
 
   harvestTask() {
     if (this.creep.store.getFreeCapacity(RESOURCE_ENERGY) === 0) {
-      this.supplyStructure(
-        this.getSpecificStructureToSupply()
-      );
+      const structure = this.getSpecificStructureToSupply() || this.findStructureInNeed();
+
+      if (!structure) {
+        // No structures need energy, switch to building or upgrading
+        const constructionSite = this.findConstructionSite();
+        if (constructionSite) {
+          this.task = HarvesterTasks.Building;
+          this.updateMemoryTask();
+          this.buildTask();
+        } else {
+          this.task = HarvesterTasks.Upgrading;
+          this.updateMemoryTask();
+          this.upgradeTask();
+        }
+      } else {
+        this.supplyStructure(structure);
+      }
     } else {
       this.harvest(
         this.getSpecificSource()
@@ -71,6 +95,10 @@ export class Harvester extends Worker implements IHarvester {
   supplyStructure(structure?: AnyStructure | null) {
     if (!structure) {
       structure = this.findStructureInNeed();
+      if (!structure) {
+        console.log(`Harvester ${this.creep.name} found no structure to supply.`);
+        return;
+      }
     }
 
     if (structure) {
@@ -90,16 +118,24 @@ export class Harvester extends Worker implements IHarvester {
     return source;
   }
 
-  findStructureInNeed(): AnyStructure {
+  findStructureInNeed(): AnyStructure | null {
     let struct = this.creep.pos.findClosestByPath(FIND_STRUCTURES, {
       filter: filterStructuresInNeed
     });
     if (!struct) {
-      struct = this.creep.room.find(FIND_STRUCTURES, {
-        filter: filterStructuresInNeed
-      })[0];
+      struct = this.creep.pos.findClosestByPath(FIND_STRUCTURES);
     }
     return struct;
+  }
+
+
+  findConstructionSite(): ConstructionSite | null {
+    let site = this.creep.pos.findClosestByPath(FIND_CONSTRUCTION_SITES);
+    if (!site) {
+      const sites = this.creep.room.find(FIND_CONSTRUCTION_SITES);
+      site = sites.length > 0 ? sites[0] : null;
+    }
+    return site;
   }
 
   setSpecificStructureToSupply(structureId: Id<AnyStructure>) {
@@ -122,5 +158,64 @@ export class Harvester extends Worker implements IHarvester {
   getSpecificSource(): Source | null {
     const memory = this.getMemory();
     return Game.getObjectById(memory.specificSourceId!);
+  }
+
+  buildTask() {
+    if (this.creep.store[RESOURCE_ENERGY] === 0) {
+      this.task = HarvesterTasks.Harvesting;
+      this.updateMemoryTask();
+      this.harvest(this.getSpecificSource());
+    } else {
+      const site = this.findConstructionSite();
+      if (site) {
+        this.build(site);
+      } else {
+        // No construction sites, switch to upgrading
+        this.task = HarvesterTasks.Upgrading;
+        this.updateMemoryTask();
+        this.upgradeTask();
+      }
+    }
+  }
+
+  upgradeTask() {
+    if (this.creep.store[RESOURCE_ENERGY] === 0) {
+      this.task = HarvesterTasks.Harvesting;
+      this.updateMemoryTask();
+      this.harvest(this.getSpecificSource());
+    } else {
+      const controller = this.findControllerToUpgrade();
+      if (controller) {
+        this.upgradeController(controller);
+      } else {
+        // No controller found, go back to harvesting
+        this.task = HarvesterTasks.Harvesting;
+        this.updateMemoryTask();
+      }
+    }
+  }
+
+  build(site: ConstructionSite) {
+    const result = this.creep.build(site);
+    if (result === ERR_NOT_IN_RANGE) {
+      this.moveTo(site);
+    }
+  }
+
+  upgradeController(controller: StructureController) {
+    const result = this.creep.upgradeController(controller);
+    if (result === ERR_NOT_IN_RANGE) {
+      this.moveTo(controller);
+    }
+  }
+
+  findControllerToUpgrade(): StructureController | null {
+    return this.creep.room.controller || null;
+  }
+
+  private updateMemoryTask() {
+    const memory = this.getMemory();
+    memory.task = this.task;
+    this.setMemory(memory);
   }
 }

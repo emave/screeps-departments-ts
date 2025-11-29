@@ -1,8 +1,10 @@
-export type CreepTask = HarvesterTasks
+export type CreepTask = HarvesterTasks | BuilderTasks | UpgraderTasks
 
 export enum HarvesterTasks {
   Harvesting = "harvesting",
   Supplying = "restocking",
+  Building = "building",
+  Upgrading = "upgrading",
 }
 
 export enum BuilderTasks {
@@ -10,18 +12,39 @@ export enum BuilderTasks {
   Upgrading = "upgrading",
 }
 
+export enum UpgraderTasks {
+  Upgrading = "upgrading",
+}
+
 export enum WorkerRoles {
   Harvester = "harvester",
   Builder = "builder",
+  Upgrader = "upgrader",
   Scout = "scout",
   Attacker = "attacker",
   Defender = "defender",
 }
-
 export enum DepartmentTypes {
   Harvesting = "harvesting",
   Building = "building",
+  Upgrading = "upgrading",
   Defense = "defense",
   Scouting = "scouting",
   Attacking = "attacking",
 }
+
+export type DepartmentMemory = {
+  priority: number;
+  maxWorkersCount: number;
+  materialsPercentage: number;
+};
+
+export type DepartmentsMemory = {
+  harvestingDepartment?: DepartmentMemory;
+  buildingDepartment?: DepartmentMemory & {
+    plannedPositions: {
+      [spawnName: string]: boolean;
+    };
+  };
+  upgradingDepartment?: DepartmentMemory;
+};

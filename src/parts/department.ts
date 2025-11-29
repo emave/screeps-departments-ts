@@ -1,7 +1,7 @@
 import { IWorker } from "./worker";
 
 export interface Department {
-    supposedWorkersCount: number;
+    maxWorkersCount: number;
     defaultWorkerBody: BodyPartConstant[];
 
     run(): void;
@@ -16,7 +16,7 @@ export interface Department {
 
     spawnBestWorkerPossible(): void;
 
-    setAvailableMaterialsPercentage(percentage: number): void;
+    setMaterialsPercentage(percentage: number): void;
 
     setMemory(memory: any): void;
 
