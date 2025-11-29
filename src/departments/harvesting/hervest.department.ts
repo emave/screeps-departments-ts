@@ -108,9 +108,19 @@ export class HarvestingDepartment implements Department {
         const bodyCost = calculateBodyCost(body);
         if (availableSpawn.store.getUsedCapacity(RESOURCE_ENERGY) >= bodyCost) {
             const newName = `Harvester${Game.time}`;
-            availableSpawn.spawnCreep(body, newName, {
+            const result = availableSpawn.spawnCreep(body, newName, {
                 memory: { role: 'harvester', task: HarvesterTasks.Harvesting}
             });
+
+            if (result === OK) {
+                // Update highest produced body in memory
+                const memory = this.getMemory();
+                if (!memory.highestProducedBodyCost || bodyCost > memory.highestProducedBodyCost) {
+                    memory.highestProducedBody = body;
+                    memory.highestProducedBodyCost = bodyCost;
+                    this.setMemory(memory);
+                }
+            }
         }
     }
 

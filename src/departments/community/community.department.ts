@@ -1,9 +1,5 @@
 // Community Department - Manages all other departments
 // Controls worker priorities, resource allocation, and worker counts
-import { Department } from "../../parts/department";
-import { HarvestingDepartment } from "../harvesting/hervest.department";
-import { BuildingDepartment } from "../building/building.department";
-import { UpgradingDepartment } from "../upgrading/upgrading.department";
 import { DepartmentsMemory, WorkerRoles } from "../../parts/types";
 
 export interface DepartmentConfig {
@@ -16,8 +12,7 @@ export interface DepartmentConfig {
 export class CommunityDepartment {
   supposedWorkersCount: number = 0; // Not applicable for community department
   defaultWorkerBody: BodyPartConstant[] = [];
-  private static readonly MEMORY_KEY = "communityDepartment";
-  private static readonly MAX_CREEPS_PER_ROOM = 12;
+  private static readonly MAX_CREEPS_PER_ROOM = 13;
 
   private departments: DepartmentsMemory = {};
 
@@ -66,7 +61,8 @@ export class CommunityDepartment {
         return (
           (deptKey === 'harvestingDepartment' && role === WorkerRoles.Harvester) ||
           (deptKey === 'buildingDepartment' && role === WorkerRoles.Builder) ||
-          (deptKey === 'upgradingDepartment' && role === WorkerRoles.Upgrader)
+          (deptKey === 'upgradingDepartment' && role === WorkerRoles.Upgrader) ||
+          (deptKey === 'defenseDepartment' && role === WorkerRoles.Defender)
         );
       }).length;
 
@@ -84,7 +80,8 @@ export class CommunityDepartment {
         return (
           (dept === 'harvestingDepartment' && role === WorkerRoles.Harvester) ||
           (dept === 'buildingDepartment' && role === WorkerRoles.Builder) ||
-          (dept === 'upgradingDepartment' && role === WorkerRoles.Upgrader)
+          (dept === 'upgradingDepartment' && role === WorkerRoles.Upgrader) ||
+          (dept === 'defenseDepartment' && role === WorkerRoles.Defender)
         );
       }).length;
 

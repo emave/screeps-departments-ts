@@ -39,6 +39,8 @@ export type DepartmentMemory = {
   priority: number;
   maxWorkersCount: number;
   materialsPercentage: number;
+  highestProducedBody?: BodyPartConstant[];
+  highestProducedBodyCost?: number;
 };
 
 export type DepartmentsMemory = {
@@ -50,4 +52,5 @@ export type DepartmentsMemory = {
     lastPlanTick: number;
   };
   upgradingDepartment?: DepartmentMemory;
+  defenseDepartment?: DepartmentMemory;
 };
