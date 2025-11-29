@@ -17,6 +17,7 @@ export class CommunityDepartment {
   supposedWorkersCount: number = 0; // Not applicable for community department
   defaultWorkerBody: BodyPartConstant[] = [];
   private static readonly MEMORY_KEY = "communityDepartment";
+  private static readonly MAX_CREEPS_PER_ROOM = 12;
 
   private departments: DepartmentsMemory = {};
 
@@ -46,6 +47,31 @@ export class CommunityDepartment {
 
   calculateSupposedWorkersCount(priority: number): number {
     const totalCount = this.getTotalExistingWorkersCount();
+
+    // Cap total creeps at MAX_CREEPS_PER_ROOM
+    const effectiveTotalCount = Math.min(totalCount, CommunityDepartment.MAX_CREEPS_PER_ROOM);
+
+    // If we've reached the max, don't allocate any more workers
+    if (totalCount >= CommunityDepartment.MAX_CREEPS_PER_ROOM) {
+      // Return current worker count for this department to maintain existing workers
+      const currentWorkerCount = Object.values(Game.creeps).filter((creep) => {
+        const role = creep.memory.role;
+        const deptKey = Object.keys(this.departments).find((dept) => {
+          const deptMemory = this.departments[dept as keyof DepartmentsMemory];
+          return deptMemory?.priority === priority;
+        });
+
+        if (!deptKey) return false;
+
+        return (
+          (deptKey === 'harvestingDepartment' && role === WorkerRoles.Harvester) ||
+          (deptKey === 'buildingDepartment' && role === WorkerRoles.Builder) ||
+          (deptKey === 'upgradingDepartment' && role === WorkerRoles.Upgrader)
+        );
+      }).length;
+
+      return currentWorkerCount;
+    }
 
     // Check if any higher priority department has no workers
     const hasHigherPriorityWithNoWorkers = this.getListOfDepartments().some((dept) => {
@@ -84,7 +110,8 @@ export class CommunityDepartment {
     const percentage = priorityWeight / totalWeight;
 
     // Calculate worker count based on percentage, ensuring at least 1 for highest priority
-    const calculatedCount = Math.max(1, Math.ceil(totalCount * percentage));
+    // Use effectiveTotalCount (capped at max) instead of totalCount
+    const calculatedCount = Math.max(1, Math.ceil(effectiveTotalCount * percentage));
     return calculatedCount;
   }
 

@@ -17,6 +17,7 @@ declare global {
     task: CreepTask;
     specificStructureId?: Id<AnyStructure>;
     specificSourceId?: Id<Source>;
+    lastHarvestedSourceId?: Id<Source>;
   }
 
   // Syntax for adding properties to `global` (ex "global.log")

@@ -3,6 +3,13 @@
 import { HarvesterTasks, WorkerRoles } from "parts/types";
 import { Department } from "../../parts/department";
 import { Harvester, IHarvester } from "./harvester";
+import {
+  calculateBodyCost,
+  getUpgradedWorkerBody,
+  getAvailableMaterials,
+  findAvailableSpawn,
+  canUpgradeWorker
+} from "../../utils/departmentHelpers";
 
 export class HarvestingDepartment implements Department {
     maxWorkersCount: number = 0;
@@ -50,13 +57,7 @@ export class HarvestingDepartment implements Department {
     }
 
     getAvailableMaterials(): number {
-        // Calculate total energy available across all spawns
-        let totalEnergy = 0;
-        for (const spawnName in Game.spawns) {
-            const spawn = Game.spawns[spawnName];
-            totalEnergy += spawn.store.getUsedCapacity(RESOURCE_ENERGY);
-        }
-        return Math.floor(totalEnergy * this.materialsPercentage);
+        return getAvailableMaterials(this.materialsPercentage);
     }
 
     getWorkers(): IHarvester[] {
@@ -72,46 +73,16 @@ export class HarvestingDepartment implements Department {
 
     checkIfNewWorkerCanBeUpgraded(): boolean {
         const availableEnergy = this.getAvailableMaterials();
+        const result = canUpgradeWorker(this.defaultWorkerBody, availableEnergy);
         const upgradedBody = this.getAnUpgradedWorkerBody();
-        const upgradedCost = this.calculateBodyCost(upgradedBody);
+        const upgradedCost = calculateBodyCost(upgradedBody);
         console.log(`Checking if new harvester can be upgraded. Available energy: ${availableEnergy}, Upgraded cost: ${upgradedCost}`);
-        return availableEnergy >= upgradedCost;
+        return result;
     }
 
     getAnUpgradedWorkerBody(): BodyPartConstant[] {
-        // Upgrade by adding parts one at a time, prioritizing WORK
-        const upgradedBody = [...this.defaultWorkerBody];
         const availableEnergy = this.getAvailableMaterials();
-
-        // Priority order: WORK, CARRY, MOVE
-        const partPriority: BodyPartConstant[] = [WORK, CARRY, MOVE];
-
-        // Keep trying to add parts one at a time until we run out of energy or reach the limit
-        let priorityIndex = 0;
-        while (upgradedBody.length < 50) {
-            const partToAdd = partPriority[priorityIndex % partPriority.length];
-            const newCost = this.calculateBodyCost([...upgradedBody, partToAdd]);
-
-            if (newCost <= availableEnergy) {
-                upgradedBody.push(partToAdd);
-                priorityIndex++;
-            } else {
-                // If current priority part doesn't fit, try next priority
-                const nextIndex = (priorityIndex % partPriority.length) + 1;
-                if (nextIndex >= partPriority.length) {
-                    // We've tried all part types and none fit
-                    break;
-                }
-                priorityIndex = (Math.floor(priorityIndex / partPriority.length) * partPriority.length) + nextIndex;
-
-                // Check if we've cycled through all options at this level
-                if (priorityIndex % partPriority.length === 0 &&
-                    this.calculateBodyCost([...upgradedBody, partPriority[0]]) > availableEnergy) {
-                    break;
-                }
-            }
-        }
-        return upgradedBody;
+        return getUpgradedWorkerBody(this.defaultWorkerBody, availableEnergy);
     }
 
     spawnBestWorkerPossible(): void {
@@ -121,15 +92,7 @@ export class HarvestingDepartment implements Department {
         }
 
         // Find an available spawn
-        let availableSpawn: StructureSpawn | null = null;
-        for (const spawnName in Game.spawns) {
-            const spawn = Game.spawns[spawnName];
-            if (!spawn.spawning) {
-                availableSpawn = spawn;
-                break;
-            }
-        }
-
+        const availableSpawn = findAvailableSpawn();
         if (!availableSpawn) {
             return;
         }
@@ -142,7 +105,7 @@ export class HarvestingDepartment implements Department {
             body = this.defaultWorkerBody;
         }
 
-        const bodyCost = this.calculateBodyCost(body);
+        const bodyCost = calculateBodyCost(body);
         if (availableSpawn.store.getUsedCapacity(RESOURCE_ENERGY) >= bodyCost) {
             const newName = `Harvester${Game.time}`;
             availableSpawn.spawnCreep(body, newName, {
@@ -164,20 +127,5 @@ export class HarvestingDepartment implements Department {
 
     getMemory(): any {
         return Memory.departments[HarvestingDepartment.MEMORY_KEY] || {};
-    }
-
-    private calculateBodyCost(body: BodyPartConstant[]): number {
-        const costs: { [key: string]: number } = {
-            [MOVE]: 50,
-            [WORK]: 100,
-            [CARRY]: 50,
-            [ATTACK]: 80,
-            [RANGED_ATTACK]: 150,
-            [HEAL]: 250,
-            [TOUGH]: 10,
-            [CLAIM]: 600
-        };
-
-        return body.reduce((total, part) => total + (costs[part] || 0), 0);
     }
 }

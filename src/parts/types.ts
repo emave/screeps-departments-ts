@@ -8,11 +8,13 @@ export enum HarvesterTasks {
 }
 
 export enum BuilderTasks {
+  Harvesting = "harvesting",
   Building = "building",
   Upgrading = "upgrading",
 }
 
 export enum UpgraderTasks {
+  Harvesting = "harvesting",
   Upgrading = "upgrading",
 }
 
@@ -45,6 +47,7 @@ export type DepartmentsMemory = {
     plannedPositions: {
       [spawnName: string]: boolean;
     };
+    lastPlanTick: number;
   };
   upgradingDepartment?: DepartmentMemory;
 };

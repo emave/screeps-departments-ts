@@ -1,29 +1,30 @@
 import { BuilderTasks } from "parts/types";
 import { IWorker, Worker } from "parts/worker";
 
-export interface IBuilder extends IWorker {
-  findClosestSource(): Source;
-  findConstructionSite(): ConstructionSite | null;
-  findControllerToUpgrade(): StructureController | null;
-
-  harvest(source: Source): void;
-  build(site: ConstructionSite): void;
-  upgradeController(controller: StructureController): void;
-}
+export interface IBuilder extends IWorker {}
 
 export class Builder extends Worker implements IBuilder {
-  task: BuilderTasks = BuilderTasks.Building;
+  task: BuilderTasks = BuilderTasks.Harvesting;
 
   constructor(creep: Creep) {
     super(creep);
 
     const memory = this.getMemory();
     this.task = memory.task as BuilderTasks;
+
+    // Initialize task if not set
+    if (!this.task) {
+      this.task = BuilderTasks.Harvesting;
+      this.setMemory({ task: this.task });
+    }
   }
 
   run(): void {
     console.log(`Builder ${this.creep.name} executing task: ${this.task}`);
     switch (this.task) {
+      case BuilderTasks.Harvesting:
+        this.harvestTask();
+        break;
       case BuilderTasks.Building:
         this.buildTask();
         break;
@@ -35,88 +36,51 @@ export class Builder extends Worker implements IBuilder {
     }
   }
 
-  buildTask() {
-    if (this.creep.store[RESOURCE_ENERGY] === 0) {
-      this.harvest(this.getSpecificSource());
-    } else {
+  harvestTask() {
+    // Switch to building/upgrading when store is full
+    if (this.creep.store.getFreeCapacity(RESOURCE_ENERGY) === 0) {
       const site = this.findConstructionSite();
       if (site) {
-        this.build(site);
+        this.task = BuilderTasks.Building;
       } else {
-        // If no construction sites, switch to upgrading
         this.task = BuilderTasks.Upgrading;
-        this.upgradeTask();
       }
+      this.setMemory({ task: this.task });
+      return;
+    }
+
+    this.harvest(this.getSpecificSource());
+  }
+
+  buildTask() {
+    // Switch to harvesting when store is empty
+    if (this.creep.store[RESOURCE_ENERGY] === 0) {
+      this.task = BuilderTasks.Harvesting;
+      this.setMemory({ task: this.task });
+      return;
+    }
+
+    const site = this.findConstructionSite();
+    if (site) {
+      this.build(site);
+    } else {
+      // If no construction sites, switch to upgrading
+      this.task = BuilderTasks.Upgrading;
+      this.setMemory({ task: this.task });
     }
   }
 
   upgradeTask() {
+    // Switch to harvesting when store is empty
     if (this.creep.store[RESOURCE_ENERGY] === 0) {
-      this.harvest(this.getSpecificSource());
-    } else {
-      const controller = this.findControllerToUpgrade();
-      if (controller) {
-        this.upgradeController(controller);
-      }
-    }
-  }
-
-  harvest(source?: Source | null) {
-    if (!source) {
-      source = this.findClosestSource();
+      this.task = BuilderTasks.Harvesting;
+      this.setMemory({ task: this.task });
+      return;
     }
 
-    if (source) {
-      const result = this.creep.harvest(source);
-      if (result === ERR_NOT_IN_RANGE) {
-        this.moveTo(source);
-      }
+    const controller = this.findControllerToUpgrade();
+    if (controller) {
+      this.upgradeController(controller);
     }
-  }
-
-  build(site: ConstructionSite) {
-    const result = this.creep.build(site);
-    if (result === ERR_NOT_IN_RANGE) {
-      this.moveTo(site);
-    }
-  }
-
-  upgradeController(controller: StructureController) {
-    const result = this.creep.upgradeController(controller);
-    if (result === ERR_NOT_IN_RANGE) {
-      this.moveTo(controller);
-    }
-  }
-
-  findClosestSource(): Source {
-    let source = this.creep.pos.findClosestByPath(FIND_SOURCES);
-    if (!source) {
-      source = this.creep.room.find(FIND_SOURCES)[0];
-    }
-    return source;
-  }
-
-  findConstructionSite(): ConstructionSite | null {
-    let site = this.creep.pos.findClosestByPath(FIND_CONSTRUCTION_SITES);
-    if (!site) {
-      const sites = this.creep.room.find(FIND_CONSTRUCTION_SITES);
-      site = sites.length > 0 ? sites[0] : null;
-    }
-    return site;
-  }
-
-  findControllerToUpgrade(): StructureController | null {
-    return this.creep.room.controller || null;
-  }
-
-  setSpecificSourceId(sourceId: Id<Source>) {
-    const memory = this.getMemory();
-    memory.specificSourceId = sourceId;
-    this.setMemory(memory);
-  }
-
-  getSpecificSource(): Source | null {
-    const memory = this.getMemory();
-    return Game.getObjectById(memory.specificSourceId!);
   }
 }

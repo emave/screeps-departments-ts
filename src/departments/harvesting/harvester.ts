@@ -2,14 +2,7 @@ import { HarvesterTasks } from "parts/types";
 import { IWorker, Worker } from "parts/worker";
 
 export interface IHarvester extends IWorker {
-  findClosestSource(): Source;
   findStructureInNeed(): AnyStructure | null;
-  findConstructionSite(): ConstructionSite | null;
-  findControllerToUpgrade(): StructureController | null;
-
-  harvest(source: Source): void;
-  build(site: ConstructionSite): void;
-  upgradeController(controller: StructureController): void;
 }
 
 const structurePriority = {
@@ -79,19 +72,6 @@ export class Harvester extends Worker implements IHarvester {
     }
   }
 
-  harvest(source?: Source | null) {
-    if (!source) {
-      source = this.findClosestSource();
-    }
-
-    if (source) {
-      const result = this.creep.harvest(source);
-      if (result === ERR_NOT_IN_RANGE) {
-        this.moveTo(source);
-      }
-    }
-  }
-
   supplyStructure(structure?: AnyStructure | null) {
     if (!structure) {
       structure = this.findStructureInNeed();
@@ -109,33 +89,11 @@ export class Harvester extends Worker implements IHarvester {
     }
   }
 
-  findClosestSource(): Source {
-    let source = this.creep.pos.findClosestByPath(FIND_SOURCES);
-    if (!source) {
-      source = this.creep.room.find(FIND_SOURCES)[0];
-    }
-    // TODO should go to the other room or something if no source found
-    return source;
-  }
-
   findStructureInNeed(): AnyStructure | null {
     let struct = this.creep.pos.findClosestByPath(FIND_STRUCTURES, {
       filter: filterStructuresInNeed
     });
-    if (!struct) {
-      struct = this.creep.pos.findClosestByPath(FIND_STRUCTURES);
-    }
     return struct;
-  }
-
-
-  findConstructionSite(): ConstructionSite | null {
-    let site = this.creep.pos.findClosestByPath(FIND_CONSTRUCTION_SITES);
-    if (!site) {
-      const sites = this.creep.room.find(FIND_CONSTRUCTION_SITES);
-      site = sites.length > 0 ? sites[0] : null;
-    }
-    return site;
   }
 
   setSpecificStructureToSupply(structureId: Id<AnyStructure>) {
@@ -147,17 +105,6 @@ export class Harvester extends Worker implements IHarvester {
   getSpecificStructureToSupply(): AnyStructure | null {
     const memory = this.getMemory();
     return Game.getObjectById(memory.specificStructureId!);
-  }
-
-  setSpecificSourceId(sourceId: Id<Source>) {
-    const memory = this.getMemory();
-    memory.specificSourceId = sourceId;
-    this.setMemory(memory);
-  }
-
-  getSpecificSource(): Source | null {
-    const memory = this.getMemory();
-    return Game.getObjectById(memory.specificSourceId!);
   }
 
   buildTask() {
@@ -193,24 +140,6 @@ export class Harvester extends Worker implements IHarvester {
         this.updateMemoryTask();
       }
     }
-  }
-
-  build(site: ConstructionSite) {
-    const result = this.creep.build(site);
-    if (result === ERR_NOT_IN_RANGE) {
-      this.moveTo(site);
-    }
-  }
-
-  upgradeController(controller: StructureController) {
-    const result = this.creep.upgradeController(controller);
-    if (result === ERR_NOT_IN_RANGE) {
-      this.moveTo(controller);
-    }
-  }
-
-  findControllerToUpgrade(): StructureController | null {
-    return this.creep.room.controller || null;
   }
 
   private updateMemoryTask() {
