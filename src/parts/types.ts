@@ -1,4 +1,4 @@
-export type CreepTask = HarvesterTasks | BuilderTasks | UpgraderTasks
+export type CreepTask = HarvesterTasks | BuilderTasks | UpgraderTasks | ScoutTasks
 
 export enum HarvesterTasks {
   Harvesting = "harvesting",
@@ -16,6 +16,12 @@ export enum BuilderTasks {
 export enum UpgraderTasks {
   Harvesting = "harvesting",
   Upgrading = "upgrading",
+}
+
+export enum ScoutTasks {
+  Scouting = "scouting",
+  Claiming = "claiming",
+  Reserving = "reserving",
 }
 
 export enum WorkerRoles {
@@ -56,4 +62,5 @@ export type DepartmentsMemory = {
   upgradingDepartment?: DepartmentMemory;
   defenseDepartment?: DepartmentMemory;
   planningDepartment?: PlanningDepartmentMemory;
+  scoutingDepartment?: DepartmentMemory;
 };

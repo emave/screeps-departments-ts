@@ -215,7 +215,7 @@ export class BasePlanningDepartment implements PlanningDepartment {
   }
 
   /**
-   * Plan roads from the outer circle to sources and controller
+   * Plan roads from the outer circle to sources, controller, and minerals
    */
   private planRoadsToResources(spawn: StructureSpawn): void {
     const room = Game.rooms[spawn.room.name];
@@ -237,6 +237,9 @@ export class BasePlanningDepartment implements PlanningDepartment {
     // Find controller
     const controller = room.controller;
 
+    // Find all minerals in the room
+    const minerals = room.find(FIND_MINERALS);
+
     // Get positions on the third road circle (radius 3, 6, or 9) as starting points
     // Use the innermost road circle (radius 3) to start roads to resources
     const roadCirclePositions = this.getCirclePositions(spawn.pos, 3);
@@ -249,6 +252,11 @@ export class BasePlanningDepartment implements PlanningDepartment {
     // Plan road to controller if it exists
     if (controller) {
       this.planRoadPath(roadCirclePositions, controller.pos);
+    }
+
+    // Plan roads to each mineral
+    for (const mineral of minerals) {
+      this.planRoadPath(roadCirclePositions, mineral.pos);
     }
 
     // Mark roads as planned

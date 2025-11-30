@@ -4,6 +4,7 @@ import { DefenseDepartment } from "departments/defense/defense.department";
 import { HarvestingDepartment } from "departments/harvesting/hervest.department";
 import { UpgradingDepartment } from "departments/upgrading/upgrading.department";
 import { BasePlanningDepartment } from "departments/planning/planning.department";
+import { ScoutingDepartment } from "departments/scouting/scouting.department";
 import { CreepTask, DepartmentsMemory, DepartmentTypes } from "parts/types";
 import { ErrorMapper } from "utils/ErrorMapper";
 
@@ -64,4 +65,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
 
   const upgradingDepartment = new UpgradingDepartment();
   upgradingDepartment.run();
+
+  const scoutingDepartment = new ScoutingDepartment();
+  scoutingDepartment.run();
 });

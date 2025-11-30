@@ -42,9 +42,6 @@ export class CommunityDepartment {
   calculateSupposedWorkersCount(priority: number): number {
     const totalCount = this.getTotalExistingWorkersCount();
 
-    // Cap total creeps at MAX_CREEPS_PER_ROOM
-    const effectiveTotalCount = Math.min(totalCount, CommunityDepartment.MAX_CREEPS_PER_ROOM);
-
     // If we've reached the max, don't allocate any more workers
     if (totalCount >= CommunityDepartment.MAX_CREEPS_PER_ROOM) {
       // Return current worker count for this department to maintain existing workers
@@ -61,7 +58,8 @@ export class CommunityDepartment {
           (deptKey === 'harvestingDepartment' && role === WorkerRoles.Harvester) ||
           (deptKey === 'buildingDepartment' && role === WorkerRoles.Builder) ||
           (deptKey === 'upgradingDepartment' && role === WorkerRoles.Upgrader) ||
-          (deptKey === 'defenseDepartment' && role === WorkerRoles.Defender)
+          (deptKey === 'defenseDepartment' && role === WorkerRoles.Defender) ||
+          (deptKey === 'scoutingDepartment' && role === WorkerRoles.Scout)
         );
       }).length;
 
@@ -80,7 +78,8 @@ export class CommunityDepartment {
           (dept === 'harvestingDepartment' && role === WorkerRoles.Harvester) ||
           (dept === 'buildingDepartment' && role === WorkerRoles.Builder) ||
           (dept === 'upgradingDepartment' && role === WorkerRoles.Upgrader) ||
-          (dept === 'defenseDepartment' && role === WorkerRoles.Defender)
+          (dept === 'defenseDepartment' && role === WorkerRoles.Defender) ||
+          (dept === 'scoutingDepartment' && role === WorkerRoles.Scout)
         );
       }).length;
 
@@ -105,9 +104,10 @@ export class CommunityDepartment {
     // Calculate percentage for this department
     const percentage = priorityWeight / totalWeight;
 
-    // Calculate worker count based on percentage, ensuring at least 1 for highest priority
-    // Use effectiveTotalCount (capped at max) instead of totalCount
-    const calculatedCount = Math.max(1, Math.ceil(effectiveTotalCount * percentage));
+    // Calculate worker count dynamically based on current total + room to grow
+    // Allow allocation to grow beyond current total by using totalCount + 1 as target
+    const targetCount = Math.min(totalCount + 1, CommunityDepartment.MAX_CREEPS_PER_ROOM);
+    const calculatedCount = Math.max(1, Math.ceil(targetCount * percentage));
     return calculatedCount;
   }
 
