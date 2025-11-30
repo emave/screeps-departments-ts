@@ -1,23 +1,19 @@
+import { WorkerTypes } from "common/enum";
+import { SpawnerController } from "controllers/spawner/spawner.controller";
+import { CarrierBehavior } from "utils/behaviors/carrier.behavior";
+import { MinerBehavior } from "utils/behaviors/miner.behavior";
+import { WorkerBehavior } from "utils/behaviors/worker.behavior";
 import { ErrorMapper } from "utils/ErrorMapper";
+import { findHostilesInAllSpawnsRooms } from "utils/findHostiles";
 
 declare global {
-  /*
-    Example types, expand on these or remove them and add your own.
-    Note: Values, properties defined here do no fully *exist* by this type definiton alone.
-          You must also give them an implemention if you would like to use them. (ex. actually setting a `role` property in a Creeps memory)
-
-    Types added in this `global` block are in an ambient, global context. This is needed because `main.ts` is a module file (uses import or export).
-    Interfaces matching on name from @types/screeps will be merged. This is how you can extend the 'built-in' interfaces from @types/screeps.
-  */
-  // Memory extension samples
   interface Memory {
-    uuid: number;
-    log: any;
+    maxCreepsPerRoom: number;
+    enemyPositions: { [roomName: string]: { x: number; y: number }[] };
   }
 
   interface CreepMemory {
     role: string;
-    room: string;
     working: boolean;
   }
 
@@ -34,10 +30,31 @@ declare global {
 export const loop = ErrorMapper.wrapLoop(() => {
   console.log(`Current game tick is ${Game.time}`);
 
-  // Automatically delete memory of missing creeps
+  findHostilesInAllSpawnsRooms().forEach(({ room, hostiles }) => {
+    if (!Memory.enemyPositions) {
+      Memory.enemyPositions = {};
+    }
+    Memory.enemyPositions[room] = hostiles.map(hostile => ({ x: hostile.pos.x, y: hostile.pos.y }));
+  });
+
+  new SpawnerController().run();
+
+  // Run each creep
+  Object.values(Game.creeps).forEach((creep: Creep) => {
+    switch (creep.memory.role) {
+      case WorkerTypes.Miner:
+        new MinerBehavior(creep).run();
+        break;
+      case WorkerTypes.Carrier:
+        new CarrierBehavior(creep).run();
+        break;
+    }
+  });
+
   for (const name in Memory.creeps) {
     if (!(name in Game.creeps)) {
       delete Memory.creeps[name];
+      console.log(`Clearing non-existing creep memory: ${name}`);
     }
   }
 });
