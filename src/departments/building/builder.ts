@@ -19,8 +19,7 @@ export class Builder extends Worker implements IBuilder {
     }
   }
 
-  run(): void {
-    console.log(`Builder ${this.creep.name} executing task: ${this.task}`);
+  run(): void {;
     switch (this.task) {
       case BuilderTasks.Harvesting:
         this.harvestTask();
@@ -41,11 +40,10 @@ export class Builder extends Worker implements IBuilder {
     if (this.creep.store.getFreeCapacity(RESOURCE_ENERGY) === 0) {
       const site = this.findConstructionSite();
       if (site) {
-        this.task = BuilderTasks.Building;
+        this.switchTask(BuilderTasks.Building, '🔨 Building');
       } else {
-        this.task = BuilderTasks.Upgrading;
+        this.switchTask(BuilderTasks.Upgrading, '⚡ Upgrading');
       }
-      this.setMemory({ task: this.task });
       return;
     }
 
@@ -55,8 +53,7 @@ export class Builder extends Worker implements IBuilder {
   buildTask() {
     // Switch to harvesting when store is empty
     if (this.creep.store[RESOURCE_ENERGY] === 0) {
-      this.task = BuilderTasks.Harvesting;
-      this.setMemory({ task: this.task });
+      this.switchTask(BuilderTasks.Harvesting, '⛏️ Harvesting');
       return;
     }
 
@@ -65,16 +62,14 @@ export class Builder extends Worker implements IBuilder {
       this.build(site);
     } else {
       // If no construction sites, switch to upgrading
-      this.task = BuilderTasks.Upgrading;
-      this.setMemory({ task: this.task });
+      this.switchTask(BuilderTasks.Upgrading, '⚡ Upgrading');
     }
   }
 
   upgradeTask() {
     // Switch to harvesting when store is empty
     if (this.creep.store[RESOURCE_ENERGY] === 0) {
-      this.task = BuilderTasks.Harvesting;
-      this.setMemory({ task: this.task });
+      this.switchTask(BuilderTasks.Harvesting, '⛏️ Harvesting');
       return;
     }
 

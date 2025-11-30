@@ -6,11 +6,8 @@ export interface IDefender extends Soldier {
 
 export class Defender extends Soldier implements IDefender {
   run(): void {
-    console.log(`[Defender ${this.creep.name}] Starting run in room ${this.creep.room.name}`);
-
     // Priority 1: Clear all hostile creeps from the room
     const hostileCreeps = this.findAllHostileCreeps();
-    console.log(`[Defender ${this.creep.name}] Found ${hostileCreeps.length} hostile creeps`);
     if (hostileCreeps.length > 0) {
       const target = this.selectBestHostileTarget(hostileCreeps);
       if (target) {
@@ -22,7 +19,6 @@ export class Defender extends Soldier implements IDefender {
 
     // Priority 2: Clear all hostile structures from the room (including layers/ramparts)
     const hostileStructures = this.findAllHostileStructures();
-    console.log(`[Defender ${this.creep.name}] Found ${hostileStructures.length} hostile structures`);
     if (hostileStructures.length > 0) {
       const target = this.selectBestStructureTarget(hostileStructures);
       if (target) {
@@ -34,7 +30,6 @@ export class Defender extends Soldier implements IDefender {
 
     // Priority 3: Clear hostile construction sites
     const hostileConstructionSites = this.findHostileConstructionSites();
-    console.log(`[Defender ${this.creep.name}] Found ${hostileConstructionSites.length} hostile construction sites`);
     if (hostileConstructionSites.length > 0) {
       const target = this.creep.pos.findClosestByRange(hostileConstructionSites);
       if (target) {
@@ -53,7 +48,6 @@ export class Defender extends Soldier implements IDefender {
     }
 
     // Priority 5: Patrol or maintain position
-    console.log(`[Defender ${this.creep.name}] Patrolling - no threats found`);
     this.patrol();
   }
 

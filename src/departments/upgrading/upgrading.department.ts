@@ -31,16 +31,16 @@ export class UpgradingDepartment implements Department {
       Memory.departments[UpgradingDepartment.MEMORY_KEY] = {
         priority: 3,
         maxWorkersCount: this.maxWorkersCount,
-        materialsPercentage: this.materialsPercentage,
+        materialsPercentage: this.materialsPercentage
       };
     }
   }
 
-    updateStateFromMemory(): void {
-        const memory = this.getMemory();
-        this.maxWorkersCount = memory.maxWorkersCount || this.maxWorkersCount;
-        this.materialsPercentage = memory.materialsPercentage || this.materialsPercentage;
-    }
+  updateStateFromMemory(): void {
+    const memory = this.getMemory();
+    this.maxWorkersCount = memory.maxWorkersCount || this.maxWorkersCount;
+    this.materialsPercentage = memory.materialsPercentage || this.materialsPercentage;
+  }
 
   run(): void {
     this.updateStateFromMemory();
@@ -102,10 +102,10 @@ export class UpgradingDepartment implements Department {
     }
 
     const bodyCost = calculateBodyCost(body);
-    if (availableSpawn.store.getUsedCapacity(RESOURCE_ENERGY) >= bodyCost) {
+    if (this.getAvailableMaterials() >= bodyCost) {
       const newName = `Upgrader${Game.time}`;
       const result = availableSpawn.spawnCreep(body, newName, {
-        memory: { role: "upgrader", task: UpgraderTasks.Harvesting }
+        memory: { role: WorkerRoles.Upgrader, task: UpgraderTasks.Harvesting }
       });
 
       if (result === OK) {
@@ -115,7 +115,12 @@ export class UpgradingDepartment implements Department {
           memory.highestProducedBody = body;
           memory.highestProducedBodyCost = bodyCost;
           this.setMemory(memory);
+            console.log(`Spawned new upgrader: ${newName} with body cost: ${bodyCost} and body: ${body}`);
         }
+      } else {
+        console.log(
+          `Failed to spawn upgrader: ${result}. Available energy: ${this.getAvailableMaterials()}, Body cost: ${bodyCost}`
+        );
       }
     }
   }

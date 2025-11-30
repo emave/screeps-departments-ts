@@ -43,14 +43,17 @@ export type DepartmentMemory = {
   highestProducedBodyCost?: number;
 };
 
+export type PlanningDepartmentMemory = {
+  plannedPositions: {
+    [spawnName: string]: boolean;
+  };
+  lastPlanTick: number;
+};
+
 export type DepartmentsMemory = {
   harvestingDepartment?: DepartmentMemory;
-  buildingDepartment?: DepartmentMemory & {
-    plannedPositions: {
-      [spawnName: string]: boolean;
-    };
-    lastPlanTick: number;
-  };
+  buildingDepartment?: DepartmentMemory;
   upgradingDepartment?: DepartmentMemory;
   defenseDepartment?: DepartmentMemory;
+  planningDepartment?: PlanningDepartmentMemory;
 };

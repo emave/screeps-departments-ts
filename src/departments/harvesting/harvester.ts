@@ -30,7 +30,6 @@ export class Harvester extends Worker implements IHarvester {
   }
 
   run(): void {
-    console.log(`Harvester ${this.creep.name} executing task: ${this.task}`);
     switch (this.task) {
       case HarvesterTasks.Harvesting:
         this.harvestTask();
@@ -54,12 +53,10 @@ export class Harvester extends Worker implements IHarvester {
         // No structures need energy, switch to building or upgrading
         const constructionSite = this.findConstructionSite();
         if (constructionSite) {
-          this.task = HarvesterTasks.Building;
-          this.updateMemoryTask();
+          this.switchTask(HarvesterTasks.Building, '🔨 Building');
           this.buildTask();
         } else {
-          this.task = HarvesterTasks.Upgrading;
-          this.updateMemoryTask();
+          this.switchTask(HarvesterTasks.Upgrading, '⚡ Upgrading');
           this.upgradeTask();
         }
       } else {
@@ -109,8 +106,7 @@ export class Harvester extends Worker implements IHarvester {
 
   buildTask() {
     if (this.creep.store[RESOURCE_ENERGY] === 0) {
-      this.task = HarvesterTasks.Harvesting;
-      this.updateMemoryTask();
+      this.switchTask(HarvesterTasks.Harvesting, '⛏️ Harvesting');
       this.harvest(this.getSpecificSource());
     } else {
       const site = this.findConstructionSite();
@@ -118,8 +114,7 @@ export class Harvester extends Worker implements IHarvester {
         this.build(site);
       } else {
         // No construction sites, switch to upgrading
-        this.task = HarvesterTasks.Upgrading;
-        this.updateMemoryTask();
+        this.switchTask(HarvesterTasks.Upgrading, '⚡ Upgrading');
         this.upgradeTask();
       }
     }
@@ -127,8 +122,7 @@ export class Harvester extends Worker implements IHarvester {
 
   upgradeTask() {
     if (this.creep.store[RESOURCE_ENERGY] === 0) {
-      this.task = HarvesterTasks.Harvesting;
-      this.updateMemoryTask();
+      this.switchTask(HarvesterTasks.Harvesting, '⛏️ Harvesting');
       this.harvest(this.getSpecificSource());
     } else {
       const controller = this.findControllerToUpgrade();
@@ -136,15 +130,8 @@ export class Harvester extends Worker implements IHarvester {
         this.upgradeController(controller);
       } else {
         // No controller found, go back to harvesting
-        this.task = HarvesterTasks.Harvesting;
-        this.updateMemoryTask();
+        this.switchTask(HarvesterTasks.Harvesting, '⛏️ Harvesting');
       }
     }
-  }
-
-  private updateMemoryTask() {
-    const memory = this.getMemory();
-    memory.task = this.task;
-    this.setMemory(memory);
   }
 }

@@ -1,3 +1,5 @@
+import { CreepTask } from "./types";
+
 export interface IWorker {
   creep: Creep;
   run(): void;
@@ -171,4 +173,19 @@ export class Worker implements IWorker {
     const memory = this.getMemory();
     return Game.getObjectById(memory.specificSourceId!);
   }
+
+  /**
+   * Switch to a new task and make the creep say it
+   * @param newTask The new task to switch to
+   * @param message Optional custom message (defaults to the task name)
+   */
+  switchTask(newTask: CreepTask, message?: string): void {
+    this.task = newTask;
+    const memory = this.getMemory();
+    memory.task = newTask;
+    this.setMemory(memory);
+    this.creep.say(message || newTask);
+  }
+
+  task: string = "";
 }

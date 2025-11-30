@@ -20,21 +20,18 @@ export class Upgrader extends Worker implements IUpgrader {
   }
 
   run(): void {
-    console.log(`Upgrader ${this.creep.name} executing task: ${this.task}`);
     this.upgradeTask();
   }
 
   upgradeTask() {
     // Switch to supplying when store is full
     if (this.task === UpgraderTasks.Harvesting && this.creep.store.getFreeCapacity(RESOURCE_ENERGY) === 0) {
-      this.task = UpgraderTasks.Upgrading;
-      this.setMemory({ task: this.task });
+      this.switchTask(UpgraderTasks.Upgrading, '⚡ Upgrading');
     }
 
     // Switch to harvesting when store is empty
     if (this.task === UpgraderTasks.Upgrading && this.creep.store[RESOURCE_ENERGY] === 0) {
-      this.task = UpgraderTasks.Harvesting;
-      this.setMemory({ task: this.task });
+      this.switchTask(UpgraderTasks.Harvesting, '⛏️ Harvesting');
     }
 
     if (this.task === UpgraderTasks.Harvesting) {

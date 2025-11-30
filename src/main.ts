@@ -3,6 +3,7 @@ import { CommunityDepartment } from "departments/community/community.department"
 import { DefenseDepartment } from "departments/defense/defense.department";
 import { HarvestingDepartment } from "departments/harvesting/hervest.department";
 import { UpgradingDepartment } from "departments/upgrading/upgrading.department";
+import { BasePlanningDepartment } from "departments/planning/planning.department";
 import { CreepTask, DepartmentsMemory, DepartmentTypes } from "parts/types";
 import { ErrorMapper } from "utils/ErrorMapper";
 
@@ -45,6 +46,9 @@ export const loop = ErrorMapper.wrapLoop(() => {
       delete Memory.creeps[name];
     }
   }
+
+  const planningDepartment = new BasePlanningDepartment();
+  planningDepartment.run();
 
   const communityDepartment = new CommunityDepartment();
   communityDepartment.run();

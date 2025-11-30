@@ -1,6 +1,6 @@
 // Community Department - Manages all other departments
 // Controls worker priorities, resource allocation, and worker counts
-import { DepartmentsMemory, WorkerRoles } from "../../parts/types";
+import { DepartmentMemory, DepartmentsMemory, PlanningDepartmentMemory, WorkerRoles } from "../../parts/types";
 
 export interface DepartmentConfig {
   priority: number; // Lower number = higher priority
@@ -12,7 +12,7 @@ export interface DepartmentConfig {
 export class CommunityDepartment {
   supposedWorkersCount: number = 0; // Not applicable for community department
   defaultWorkerBody: BodyPartConstant[] = [];
-  private static readonly MAX_CREEPS_PER_ROOM = 13;
+  private static readonly MAX_CREEPS_PER_ROOM = 20;
 
   private departments: DepartmentsMemory = {};
 
@@ -27,17 +27,16 @@ export class CommunityDepartment {
     Object.keys(this.departments).forEach((deptKey) => {
       const deptMemory = this.departments[deptKey as keyof DepartmentsMemory];
       if (!deptMemory) return;
-      const priority = deptMemory.priority ?? 5;
+      const priority = (deptMemory as DepartmentMemory).priority ?? 5;
 
       const calculatedWorkersCount = this.calculateSupposedWorkersCount(priority);
-      deptMemory.maxWorkersCount = calculatedWorkersCount;
+      (deptMemory as DepartmentMemory).maxWorkersCount = calculatedWorkersCount;
 
-      const calculatedMaterialsPercentage = this.calculateMaterialsPercentage(priority);
-      deptMemory.materialsPercentage = calculatedMaterialsPercentage;
+    //   const calculatedMaterialsPercentage = this.calculateMaterialsPercentage(priority);
+      (deptMemory as DepartmentMemory).materialsPercentage = 1;
+
+      Memory.departments![deptKey as keyof DepartmentsMemory] = deptMemory as PlanningDepartmentMemory & DepartmentMemory;
     });
-
-    // Save updated configs back to memory
-    Memory.departments = this.departments;
   }
 
   calculateSupposedWorkersCount(priority: number): number {
@@ -53,7 +52,7 @@ export class CommunityDepartment {
         const role = creep.memory.role;
         const deptKey = Object.keys(this.departments).find((dept) => {
           const deptMemory = this.departments[dept as keyof DepartmentsMemory];
-          return deptMemory?.priority === priority;
+          return (deptMemory as DepartmentMemory)?.priority === priority;
         });
 
         if (!deptKey) return false;
@@ -72,7 +71,7 @@ export class CommunityDepartment {
     // Check if any higher priority department has no workers
     const hasHigherPriorityWithNoWorkers = this.getListOfDepartments().some((dept) => {
       const deptMemory = this.departments[dept as keyof DepartmentsMemory];
-      if (!deptMemory || deptMemory.priority >= priority) return false;
+      if (!deptMemory || (deptMemory as DepartmentMemory).priority >= priority) return false;
 
       // Count workers for this department
       const deptWorkerCount = Object.values(Game.creeps).filter((creep) => {
@@ -99,7 +98,7 @@ export class CommunityDepartment {
 
     // Calculate total weight of all departments
     const totalWeight = this.getListOfDepartments().reduce((sum, dept) => {
-      const deptPriority = this.departments[dept as keyof DepartmentsMemory]?.priority || 5;
+      const deptPriority = (this.departments[dept as keyof DepartmentsMemory] as DepartmentMemory)?.priority || 5;
       return sum + (1 / deptPriority);
     }, 0);
 
@@ -113,8 +112,10 @@ export class CommunityDepartment {
   }
 
   calculateMaterialsPercentage(priority: number): number {
-    const lowestPriority = Math.max(...this.getListOfDepartments().map((dept) => this.departments[dept as keyof DepartmentsMemory]?.priority || 5));
-    const calculatedPercentage = ((lowestPriority - priority + 1) / lowestPriority) * 0.5; // Max 50% energy allocation
+    const lowestPriority = Math.max(...this.getListOfDepartments()
+      .filter(dept => dept !== 'planningDepartment')
+      .map((dept) => (this.departments[dept as keyof DepartmentsMemory] as DepartmentMemory)?.priority || 5));
+    const calculatedPercentage = ((lowestPriority - priority + 1) / lowestPriority) * 0.5; // Max 80% energy allocation
     return Math.min(calculatedPercentage, 0.5);
   }
 
@@ -127,6 +128,7 @@ export class CommunityDepartment {
   }
 
   getDepartmentsMemory(): DepartmentsMemory {
-    return Memory.departments || {};
+    const { planningDepartment, ...rest } = Memory.departments || {};
+    return rest;
   }
 }

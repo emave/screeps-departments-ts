@@ -106,10 +106,10 @@ export class HarvestingDepartment implements Department {
         }
 
         const bodyCost = calculateBodyCost(body);
-        if (availableSpawn.store.getUsedCapacity(RESOURCE_ENERGY) >= bodyCost) {
+        if (this.getAvailableMaterials() >= bodyCost) {
             const newName = `Harvester${Game.time}`;
             const result = availableSpawn.spawnCreep(body, newName, {
-                memory: { role: 'harvester', task: HarvesterTasks.Harvesting}
+                memory: { role: WorkerRoles.Harvester, task: HarvesterTasks.Harvesting}
             });
 
             if (result === OK) {
@@ -119,7 +119,10 @@ export class HarvestingDepartment implements Department {
                     memory.highestProducedBody = body;
                     memory.highestProducedBodyCost = bodyCost;
                     this.setMemory(memory);
+                    console.log(`Spawned new harvester: ${newName} with body cost: ${bodyCost} and body: ${body}`);
                 }
+            } else {
+                console.log(`Failed to spawn harvester: ${result}. Available energy: ${this.getAvailableMaterials()}, Body cost: ${bodyCost}`);
             }
         }
     }
