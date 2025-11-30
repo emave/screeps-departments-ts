@@ -105,6 +105,11 @@ export class HarvestingDepartment implements Department {
             body = this.defaultWorkerBody;
         }
 
+        // Should check if energy is full
+        if (Game.spawns[availableSpawn.name].room.energyAvailable < Game.spawns[availableSpawn.name].room.energyCapacityAvailable) {
+            return;
+        }
+
         const bodyCost = calculateBodyCost(body);
         if (this.getAvailableMaterials() >= bodyCost) {
             const newName = `Harvester${Game.time}`;

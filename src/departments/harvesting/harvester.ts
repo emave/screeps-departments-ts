@@ -9,9 +9,11 @@ const structurePriority = {
   [STRUCTURE_EXTENSION]: 1,
   [STRUCTURE_SPAWN]: 2,
   [STRUCTURE_TOWER]: 3,
+  [STRUCTURE_CONTAINER]: 4,
+  [STRUCTURE_STORAGE]: 5,
 };
 
-type StructureTypes = StructureExtension | StructureSpawn | StructureTower;
+type StructureTypes = StructureExtension | StructureSpawn | StructureTower | StructureContainer | StructureStorage;
 
 const filterStructuresInNeed = (structure: StructureTypes): structure is StructureTypes => {
   return (
@@ -87,10 +89,30 @@ export class Harvester extends Worker implements IHarvester {
   }
 
   findStructureInNeed(): AnyStructure | null {
-    let struct = this.creep.pos.findClosestByPath(FIND_STRUCTURES, {
+    const structures = this.creep.room.find(FIND_STRUCTURES, {
       filter: filterStructuresInNeed
+    }) as StructureTypes[];
+
+    if (structures.length === 0) {
+      return null;
+    }
+
+    // Sort by priority (lower number = higher priority), then by distance
+    structures.sort((a, b) => {
+      const priorityA = structurePriority[a.structureType as keyof typeof structurePriority];
+      const priorityB = structurePriority[b.structureType as keyof typeof structurePriority];
+
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+
+      // Same priority, prefer closer structure
+      const distA = this.creep.pos.getRangeTo(a);
+      const distB = this.creep.pos.getRangeTo(b);
+      return distA - distB;
     });
-    return struct;
+
+    return structures[0];
   }
 
   setSpecificStructureToSupply(structureId: Id<AnyStructure>) {

@@ -122,6 +122,59 @@ export class Worker implements IWorker {
     }
   }
 
+  repair(structure: Structure): void {
+    const result = this.creep.repair(structure);
+    if (result === ERR_NOT_IN_RANGE) {
+      this.moveTo(structure);
+    }
+  }
+
+  findStructureToRepair(): Structure | null {
+    // Priority list for repair (highest to lowest priority)
+    const repairPriority: StructureConstant[] = [
+      STRUCTURE_SPAWN,           // 1. Spawns - critical
+      STRUCTURE_TOWER,           // 2. Towers - defense
+      STRUCTURE_EXTENSION,       // 3. Extensions
+      STRUCTURE_STORAGE,         // 4. Storage
+      STRUCTURE_CONTAINER,       // 5. Containers - important for harvesting
+      STRUCTURE_TERMINAL,        // 6. Terminal
+      STRUCTURE_LINK,            // 7. Links
+      STRUCTURE_LAB,             // 8. Labs
+      STRUCTURE_ROAD,            // 9. Roads - infrastructure
+      STRUCTURE_RAMPART,         // 10. Ramparts - defense
+      STRUCTURE_WALL             // 11. Walls - defense (low priority due to high max hits)
+    ];
+
+    // Repair threshold: structures below this percentage of max hits need repair
+    const repairThreshold = 0.8; // 80%
+    // For walls and ramparts, use a fixed threshold since they have very high max hits
+    const fortificationThreshold = 10000;
+
+    // Search for damaged structures by priority
+    for (const structureType of repairPriority) {
+      const structures = this.creep.room.find(FIND_STRUCTURES, {
+        filter: (s) => {
+          if (s.structureType !== structureType) return false;
+
+          // Special handling for walls and ramparts
+          if (s.structureType === STRUCTURE_WALL || s.structureType === STRUCTURE_RAMPART) {
+            return s.hits < fortificationThreshold;
+          }
+
+          return s.hits < s.hitsMax * repairThreshold;
+        }
+      });
+
+      if (structures.length > 0) {
+        // Find the most damaged structure of this type
+        structures.sort((a, b) => a.hits / a.hitsMax - b.hits / b.hitsMax);
+        return structures[0];
+      }
+    }
+
+    return null;
+  }
+
   findConstructionSite(): ConstructionSite | null {
     // Priority list for construction sites (highest to lowest priority)
     const constructionPriority: StructureConstant[] = [

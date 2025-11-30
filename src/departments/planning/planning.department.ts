@@ -4,7 +4,8 @@ import { PlanningDepartment } from "../../parts/planningDepartment";
 
 export class BasePlanningDepartment implements PlanningDepartment {
   private static readonly MEMORY_KEY = "planningDepartment";
-  private static readonly MAX_CIRCLE_RADIUS = 3;
+  private static readonly CIRCLES_PER_PHASE = 3;
+  private static readonly MAX_PHASES = 3; // 3 phases = 9 circles total
 
   constructor() {
     // Initialize default memory if it doesn't exist
@@ -60,27 +61,121 @@ export class BasePlanningDepartment implements PlanningDepartment {
    * Plan extensions and roads in circles around a spawn
    * Roads go in cardinal/diagonal directions and every third circle
    * Extensions fill the rest
+   * Plans in phases: circles 1-3 first, then 4-6 once first phase is built
    */
   private planAroundSpawn(spawn: StructureSpawn): void {
     const memory = this.getMemory();
     const spawnKey = spawn.name;
 
-    // Check if we've already planned for this spawn
-    if (memory.plannedPositions && memory.plannedPositions[spawnKey]) {
-      return;
-    }
-
-    // Mark as planned
+    // Initialize spawn memory if needed
     if (!memory.plannedPositions) {
       memory.plannedPositions = {};
     }
-    memory.plannedPositions[spawnKey] = true;
-    this.setMemory(memory);
+    if (!memory.spawnPhases) {
+      memory.spawnPhases = {};
+    }
 
-    // Plan structures circle by circle
-    for (let radius = 1; radius <= BasePlanningDepartment.MAX_CIRCLE_RADIUS; radius++) {
+    // Get current phase for this spawn (starts at 1)
+    const currentPhase = memory.spawnPhases[spawnKey] || 1;
+
+    // Check if current phase is already complete
+    if (currentPhase > BasePlanningDepartment.MAX_PHASES) {
+      return; // All phases complete
+    }
+
+    // Calculate radius range for current phase
+    const startRadius = (currentPhase - 1) * BasePlanningDepartment.CIRCLES_PER_PHASE + 1;
+    const endRadius = currentPhase * BasePlanningDepartment.CIRCLES_PER_PHASE;
+
+    // Check if previous phase circles are fully built before starting new phase
+    if (currentPhase > 1) {
+      const prevPhaseComplete = this.isPhaseComplete(spawn, currentPhase - 1);
+      if (!prevPhaseComplete) {
+        return; // Wait for previous phase to complete
+      }
+    }
+
+    // Plan structures circle by circle for current phase
+    for (let radius = startRadius; radius <= endRadius; radius++) {
       this.planCircle(spawn, radius);
     }
+
+    // Check if current phase construction is complete to advance to next phase
+    if (this.isPhaseComplete(spawn, currentPhase)) {
+      memory.spawnPhases[spawnKey] = currentPhase + 1;
+      this.setMemory(memory);
+      console.log(`Spawn ${spawnKey} advanced to phase ${currentPhase + 1}`);
+    }
+  }
+
+  /**
+   * Check if all circles in a phase are fully built (no construction sites remaining)
+   */
+  private isPhaseComplete(spawn: StructureSpawn, phase: number): boolean {
+    const startRadius = (phase - 1) * BasePlanningDepartment.CIRCLES_PER_PHASE + 1;
+    const endRadius = phase * BasePlanningDepartment.CIRCLES_PER_PHASE;
+
+    for (let radius = startRadius; radius <= endRadius; radius++) {
+      const positions = this.getCirclePositions(spawn.pos, radius);
+
+      for (const pos of positions) {
+        // Skip invalid positions (walls, etc.)
+        if (!this.isPositionValidForCheck(pos)) {
+          continue;
+        }
+
+        // Check if there's a construction site (not yet built)
+        const constructionSites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
+        if (constructionSites.length > 0) {
+          return false; // Still has pending construction
+        }
+
+        // Check if position has a planned structure
+        const structures = pos.lookFor(LOOK_STRUCTURES);
+        const isCardinalOrDiagonal = this.isCardinalOrDiagonal(spawn.pos, pos);
+        const isRoadCircle = radius % 3 === 0;
+
+        // If this position should have something but doesn't, phase is not complete
+        if (isCardinalOrDiagonal || isRoadCircle) {
+          // Should have a road
+          if (!structures.some(s => s.structureType === STRUCTURE_ROAD)) {
+            // No road yet, might need to plan it
+            return false;
+          }
+        } else {
+          // Should have extension or container
+          if (!structures.some(s => s.structureType === STRUCTURE_EXTENSION || s.structureType === STRUCTURE_CONTAINER)) {
+            return false;
+          }
+        }
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Check if a position is valid for completion checking (terrain only)
+   */
+  private isPositionValidForCheck(pos: RoomPosition): boolean {
+    const room = Game.rooms[pos.roomName];
+    if (!room) {
+      return false;
+    }
+
+    // Check terrain - walls are not walkable
+    const terrain = room.getTerrain();
+    if (terrain.get(pos.x, pos.y) === TERRAIN_MASK_WALL) {
+      return false;
+    }
+
+    // Check if spawn is at this position
+    const spawns = pos.lookFor(LOOK_STRUCTURES).filter(s => s.structureType === STRUCTURE_SPAWN);
+    if (spawns.length > 0) {
+      return false;
+    }
+
+    return true;
   }
 
   /**
@@ -89,6 +184,19 @@ export class BasePlanningDepartment implements PlanningDepartment {
   private planCircle(spawn: StructureSpawn, radius: number): void {
     const isRoadCircle = radius % 3 === 0;
     const positions = this.getCirclePositions(spawn.pos, radius);
+
+    // Calculate current phase based on radius
+    const currentPhase = Math.ceil(radius / BasePlanningDepartment.CIRCLES_PER_PHASE);
+    const maxContainers = 2 * currentPhase;
+
+    // Count existing containers and container construction sites
+    const existingContainers = spawn.room.find(FIND_STRUCTURES, {
+      filter: s => s.structureType === STRUCTURE_CONTAINER
+    }).length;
+    const containerSites = spawn.room.find(FIND_CONSTRUCTION_SITES, {
+      filter: s => s.structureType === STRUCTURE_CONTAINER
+    }).length;
+    let totalContainers = existingContainers + containerSites;
 
     for (const pos of positions) {
       // Skip if position is not walkable or already has a structure
@@ -102,8 +210,19 @@ export class BasePlanningDepartment implements PlanningDepartment {
         // Place road
         this.placeConstructionSite(pos, STRUCTURE_ROAD);
       } else {
-        // Place extension
-        this.placeConstructionSite(pos, STRUCTURE_EXTENSION);
+        const maxAvailableExtensions = CONTROLLER_STRUCTURES[STRUCTURE_EXTENSION][spawn.room.controller?.level || 0] || 0;
+        const existingExtensions = spawn.room.find(FIND_STRUCTURES, {
+          // Check if it's built or under construction
+          filter: s => s.structureType === STRUCTURE_EXTENSION
+        }).length;
+        if (existingExtensions < maxAvailableExtensions) {
+          // Place extension
+          this.placeConstructionSite(pos, STRUCTURE_EXTENSION);
+        } else if (existingExtensions && existingExtensions >= maxAvailableExtensions && totalContainers < maxContainers) {
+          // Plan container if extensions are maxed out and under container limit
+          this.placeConstructionSite(pos, STRUCTURE_CONTAINER);
+          totalContainers++;
+        }
       }
     }
   }

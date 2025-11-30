@@ -10,6 +10,7 @@ export enum HarvesterTasks {
 export enum BuilderTasks {
   Harvesting = "harvesting",
   Building = "building",
+  Repairing = "repairing",
   Upgrading = "upgrading",
 }
 

@@ -14,7 +14,7 @@ import { IWorker } from "../../parts/worker";
 
 export class DefenseDepartment implements Department {
   maxWorkersCount: number = 0;
-  defaultWorkerBody: BodyPartConstant[] = [TOUGH, TOUGH, MOVE, MOVE, ATTACK, ATTACK];
+  defaultWorkerBody: BodyPartConstant[] = [TOUGH, TOUGH, TOUGH, MOVE, MOVE, RANGED_ATTACK];
   private materialsPercentage: number = 0.2;
   private static readonly MEMORY_KEY = "defenseDepartment";
 

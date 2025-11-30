@@ -131,14 +131,13 @@ export class Defender extends Soldier implements IDefender {
 
   private engageHostile(hostile: Creep): void {
     // Decide whether to flee or fight
-    // Defenders should generally not flee
-    // if (this.shouldFlee()) {
-    //   const spawn = this.creep.room.find(FIND_MY_SPAWNS)[0];
-    //   if (spawn) {
-    //     this.flee(spawn.pos);
-    //   }
-    //   return;
-    // }
+    if (this.shouldFlee()) {
+      const spawn = this.creep.room.find(FIND_MY_SPAWNS)[0];
+      if (spawn) {
+        this.flee(spawn.pos);
+      }
+      return;
+    }
 
     // Check if we have ranged attack capability
     const hasRangedAttack = this.creep.getActiveBodyparts(RANGED_ATTACK) > 0;

@@ -35,12 +35,40 @@ export class Upgrader extends Worker implements IUpgrader {
     }
 
     if (this.task === UpgraderTasks.Harvesting) {
+      // Try to withdraw from containers first
+      const container = this.findContainerWithEnergy();
+      if (container) {
+        this.withdrawFromContainer(container);
+        return;
+      }
       this.harvest(this.getSpecificSource());
     } else if (this.task === UpgraderTasks.Upgrading) {
       const controller = this.findControllerToUpgrade();
       if (controller) {
         this.upgradeController(controller);
       }
+    }
+  }
+
+  findContainerWithEnergy(): StructureContainer | null {
+    const containers = this.creep.room.find(FIND_STRUCTURES, {
+      filter: (s): s is StructureContainer =>
+        s.structureType === STRUCTURE_CONTAINER &&
+        s.store.getUsedCapacity(RESOURCE_ENERGY) > 0
+    });
+
+    if (containers.length === 0) {
+      return null;
+    }
+
+    // Find the closest container with energy
+    return this.creep.pos.findClosestByPath(containers) || containers[0];
+  }
+
+  withdrawFromContainer(container: StructureContainer): void {
+    const result = this.creep.withdraw(container, RESOURCE_ENERGY);
+    if (result === ERR_NOT_IN_RANGE) {
+      this.moveTo(container);
     }
   }
 }

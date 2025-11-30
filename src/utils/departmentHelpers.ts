@@ -69,16 +69,7 @@ export function getAvailableMaterials(materialsPercentage: number): number {
   let totalEnergy = 0;
   for (const spawnName in Game.spawns) {
     const spawn = Game.spawns[spawnName];
-    totalEnergy += spawn.store.getUsedCapacity(RESOURCE_ENERGY);
-
-    // Include extensions in the same room
-    const extensions = spawn.room.find(FIND_MY_STRUCTURES, {
-      filter: (structure) => structure.structureType === STRUCTURE_EXTENSION
-    }) as StructureExtension[];
-
-    extensions.forEach((extension) => {
-      totalEnergy += extension.store.getUsedCapacity(RESOURCE_ENERGY);
-    });
+    totalEnergy += spawn.room.energyAvailable;
   }
   return Math.floor(totalEnergy * materialsPercentage);
 }

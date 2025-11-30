@@ -112,6 +112,12 @@ export class Soldier implements ISoldier {
 
     if (!path.incomplete && path.path.length > 0) {
       this.creep.moveByPath(path.path);
+    } else {
+      // Move to the spawn if pathfinding fails
+      const spawn = this.creep.room.find(FIND_MY_SPAWNS)[0];
+      if (spawn) {
+        this.moveTo(spawn);
+      }
     }
   }
 
