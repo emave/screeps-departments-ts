@@ -1,8 +1,9 @@
 import { WorkerTypes } from "common/enum";
+import { PlannerController } from "controllers/planner/planner.controller";
 import { SpawnerController } from "controllers/spawner/spawner.controller";
+import { BuilderBehavior } from "utils/behaviors/builder.behavior";
 import { CarrierBehavior } from "utils/behaviors/carrier.behavior";
 import { MinerBehavior } from "utils/behaviors/miner.behavior";
-import { WorkerBehavior } from "utils/behaviors/worker.behavior";
 import { ErrorMapper } from "utils/ErrorMapper";
 import { findHostilesInAllSpawnsRooms } from "utils/findHostiles";
 
@@ -17,6 +18,9 @@ declare global {
   interface CreepMemory {
     role: string;
     working: boolean;
+    fleeCount?: number;
+    ignoredTargetId?: string;
+    ignoredTargetPos?: { x: number; y: number; roomName: string };
   }
 
   // Syntax for adding proprties to `global` (ex "global.log")
@@ -42,6 +46,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
 
   Object.values(Game.spawns).forEach((spawn: StructureSpawn) => {
     new SpawnerController(spawn).run();
+    new PlannerController(spawn).run();
   });
 
   // Run each creep
@@ -52,6 +57,9 @@ export const loop = ErrorMapper.wrapLoop(() => {
         break;
       case WorkerTypes.Carrier:
         new CarrierBehavior(creep).run();
+        break;
+      case WorkerTypes.Builder:
+        new BuilderBehavior(creep).run();
         break;
     }
   });

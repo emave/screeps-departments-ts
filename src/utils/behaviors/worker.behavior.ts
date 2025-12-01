@@ -46,28 +46,38 @@ export class WorkerBehavior extends CreepBehavior {
   }
 
   getNearestEnergySource(): Source | null {
-    return this.creep.pos.findClosestByPath(FIND_SOURCES_ACTIVE);
+    return this.creep.pos.findClosestByPath(FIND_SOURCES_ACTIVE, {
+      filter: source => !this.isTargetIgnored(source.id, source.pos)
+    });
   }
 
   getNearestConstructionSite(): ConstructionSite | null {
-    return this.creep.pos.findClosestByPath(FIND_CONSTRUCTION_SITES);
+    return this.creep.pos.findClosestByPath(FIND_CONSTRUCTION_SITES, {
+      filter: site => !this.isTargetIgnored(site.id, site.pos)
+    });
   }
 
   getNearestDroppedResource(): Resource | null {
     return this.creep.pos.findClosestByPath(FIND_DROPPED_RESOURCES, {
-      filter: resource => resource.resourceType === RESOURCE_ENERGY
+      filter: resource => resource.resourceType === RESOURCE_ENERGY && !this.isTargetIgnored(resource.id, resource.pos)
     });
   }
 
   getNearestContainerWithEnergy(): StructureContainer | null {
     return this.creep.pos.findClosestByPath(FIND_STRUCTURES, {
-      filter: structure => structure.structureType === STRUCTURE_CONTAINER && structure.store[RESOURCE_ENERGY] > 0
+      filter: structure =>
+        structure.structureType === STRUCTURE_CONTAINER &&
+        structure.store[RESOURCE_ENERGY] > 0 &&
+        !this.isTargetIgnored(structure.id, structure.pos)
     });
   }
 
   getNearestStorageWithEnergy(): StructureStorage | null {
     return this.creep.pos.findClosestByPath(FIND_STRUCTURES, {
-      filter: structure => structure.structureType === STRUCTURE_STORAGE && structure.store[RESOURCE_ENERGY] > 0
+      filter: structure =>
+        structure.structureType === STRUCTURE_STORAGE &&
+        structure.store[RESOURCE_ENERGY] > 0 &&
+        !this.isTargetIgnored(structure.id, structure.pos)
     });
   }
 
@@ -76,7 +86,8 @@ export class WorkerBehavior extends CreepBehavior {
       filter: structure => {
         return (
           (structure.structureType === STRUCTURE_EXTENSION || structure.structureType === STRUCTURE_SPAWN) &&
-          structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+          structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0 &&
+          !this.isTargetIgnored(structure.id, structure.pos)
         );
       }
     });
@@ -85,21 +96,27 @@ export class WorkerBehavior extends CreepBehavior {
   getNearestTowerNeedingEnergy(): StructureTower | null {
     return this.creep.pos.findClosestByPath(FIND_STRUCTURES, {
       filter: structure =>
-        structure.structureType === STRUCTURE_TOWER && structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+        structure.structureType === STRUCTURE_TOWER &&
+        structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0 &&
+        !this.isTargetIgnored(structure.id, structure.pos)
     });
   }
 
   getNearestContainerNeedingEnergy(): StructureContainer | null {
     return this.creep.pos.findClosestByPath(FIND_STRUCTURES, {
       filter: structure =>
-        structure.structureType === STRUCTURE_CONTAINER && structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+        structure.structureType === STRUCTURE_CONTAINER &&
+        structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0 &&
+        !this.isTargetIgnored(structure.id, structure.pos)
     });
   }
 
   getNearestStorageNeedingEnergy(): StructureStorage | null {
     return this.creep.pos.findClosestByPath(FIND_STRUCTURES, {
       filter: structure =>
-        structure.structureType === STRUCTURE_STORAGE && structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+        structure.structureType === STRUCTURE_STORAGE &&
+        structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0 &&
+        !this.isTargetIgnored(structure.id, structure.pos)
     });
   }
 }

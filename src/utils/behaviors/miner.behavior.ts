@@ -15,9 +15,10 @@ export class MinerBehavior extends WorkerBehavior {
   work(): void {
     const source = this.getNearestEnergySource();
     if (source) {
-      this.moveToTarget(source, (creep: Creep) => {
+      const success = this.moveToTarget(source, (creep: Creep) => {
         creep.harvest(source);
       });
+      // If target should be ignored after multiple flees, the creep will try a different source next tick
     }
   }
 }
