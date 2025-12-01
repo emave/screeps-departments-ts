@@ -7,9 +7,11 @@ import { ErrorMapper } from "utils/ErrorMapper";
 import { findHostilesInAllSpawnsRooms } from "utils/findHostiles";
 
 declare global {
-  interface Memory {
-    maxCreepsPerRoom: number;
-    enemyPositions: { [roomName: string]: { x: number; y: number }[] };
+  interface Memory {}
+
+  interface RoomMemory {
+    maxCreeps: { [role: string]: number };
+    enemyPositions: { x: number; y: number }[];
   }
 
   interface CreepMemory {
@@ -30,14 +32,17 @@ declare global {
 export const loop = ErrorMapper.wrapLoop(() => {
   console.log(`Current game tick is ${Game.time}`);
 
-  findHostilesInAllSpawnsRooms().forEach(({ room, hostiles }) => {
-    if (!Memory.enemyPositions) {
-      Memory.enemyPositions = {};
+  findHostilesInAllSpawnsRooms().forEach(({ room: roomName, hostiles }) => {
+    const room = Game.rooms[roomName];
+    if (!room.memory.enemyPositions) {
+      room.memory.enemyPositions = [];
     }
-    Memory.enemyPositions[room] = hostiles.map(hostile => ({ x: hostile.pos.x, y: hostile.pos.y }));
+    room.memory.enemyPositions = hostiles.map(hostile => ({ x: hostile.pos.x, y: hostile.pos.y }));
   });
 
-  new SpawnerController().run();
+  Object.values(Game.spawns).forEach((spawn: StructureSpawn) => {
+    new SpawnerController(spawn).run();
+  });
 
   // Run each creep
   Object.values(Game.creeps).forEach((creep: Creep) => {

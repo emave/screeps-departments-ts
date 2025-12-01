@@ -13,13 +13,19 @@ export class CreepBehavior {
       return;
     }
 
-    if (this.creep.pos.isNearTo(target)) {
+    const targetPos = target instanceof RoomPosition ? target : target.pos;
+
+    if (this.creep.pos.isNearTo(targetPos)) {
       if (callback) {
         callback(this.creep);
       }
       return;
     }
-    this.creep.moveTo(target);
+
+    const result = this.creep.moveTo(targetPos, { visualizePathStyle: { stroke: "#ffffff" } });
+    if (result !== OK) {
+      console.log(`Creep ${this.creep.name} failed to move to target: ${result}`);
+    }
   }
 
   fleeFromHostiles(): boolean {
@@ -36,7 +42,7 @@ export class CreepBehavior {
   }
 
   isEnemyInRoom(): boolean {
-    return !!Memory.enemyPositions[this.creep.room.name]?.length;
+    return !!this.creep.room.memory.enemyPositions?.length;
   }
 
   sayPublic(message: string): void {

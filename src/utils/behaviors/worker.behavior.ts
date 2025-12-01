@@ -8,11 +8,11 @@ export class WorkerBehavior extends CreepBehavior {
   }
 
   setWorkingState(): void {
-    if (!this.isHasCarryingModule() && !this.isWorking()) {
+    if (this.isNoCarryingModule() && !this.isWorking()) {
       this.setWorking(true);
       this.sayPublic("⚡ Working");
       return;
-    } else if (!this.isHasCarryingModule()) {
+    } else if (this.isNoCarryingModule()) {
       return;
     }
     if (this.isWorking() && this.isEnergyEmpty()) {
@@ -33,8 +33,8 @@ export class WorkerBehavior extends CreepBehavior {
     return this.creep.memory.working;
   }
 
-  isHasCarryingModule(): boolean {
-    return this.creep.store.getCapacity(RESOURCE_ENERGY) !== null;
+  isNoCarryingModule(): boolean {
+    return this.creep.store.getCapacity(RESOURCE_ENERGY) === null;
   }
 
   isEnergyFull(): boolean {
