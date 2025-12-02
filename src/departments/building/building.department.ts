@@ -8,7 +8,8 @@ import {
   getUpgradedWorkerBody,
   getAvailableMaterials,
   findAvailableSpawn,
-  canUpgradeWorker
+  canUpgradeWorker,
+  getAvailableMaterialsPerSpawn
 } from "../../utils/departmentHelpers";
 
 export class BuildingDepartment implements Department {
@@ -56,6 +57,10 @@ export class BuildingDepartment implements Department {
     });
   }
 
+  getAvailableMaterialsPerSpawn(): { [spawnName: string]: number } {
+    return getAvailableMaterialsPerSpawn(this.materialsPercentage);
+  }
+
   getAvailableMaterials(): number {
     return getAvailableMaterials(this.materialsPercentage);
   }
@@ -72,13 +77,26 @@ export class BuildingDepartment implements Department {
   }
 
   checkIfNewWorkerCanBeUpgraded(): boolean {
-    const availableEnergy = this.getAvailableMaterials();
-    return canUpgradeWorker(this.defaultWorkerBody, availableEnergy);
+    const availableEnergyPerSpawn = this.getAvailableMaterialsPerSpawn();
+    // Check if any spawn can upgrade the worker
+    for (const spawnName in availableEnergyPerSpawn) {
+      if (canUpgradeWorker(this.defaultWorkerBody, availableEnergyPerSpawn[spawnName])) {
+        return true;
+      }
+    }
+    return false;
   }
 
   getAnUpgradedWorkerBody(): BodyPartConstant[] {
-    const availableEnergy = this.getAvailableMaterials();
-    return getUpgradedWorkerBody(this.defaultWorkerBody, availableEnergy);
+    const availableEnergyPerSpawn = this.getAvailableMaterialsPerSpawn();
+    // Find the maximum available energy among all spawns
+    let maxAvailableEnergy = 0;
+    for (const spawnName in availableEnergyPerSpawn) {
+      if (availableEnergyPerSpawn[spawnName] > maxAvailableEnergy) {
+        maxAvailableEnergy = availableEnergyPerSpawn[spawnName];
+      }
+    }
+    return getUpgradedWorkerBody(this.defaultWorkerBody, maxAvailableEnergy);
   }
 
   spawnBestWorkerPossible(): void {
@@ -102,7 +120,7 @@ export class BuildingDepartment implements Department {
     }
 
     const bodyCost = calculateBodyCost(body);
-    if (this.getAvailableMaterials() >= bodyCost) {
+    if (availableSpawn.room.energyAvailable >= bodyCost) {
       const newName = `Builder${Game.time}`;
       const result = availableSpawn.spawnCreep(body, newName, {
         memory: { role: WorkerRoles.Builder, task: BuilderTasks.Harvesting }
@@ -118,7 +136,7 @@ export class BuildingDepartment implements Department {
           console.log(`Spawned new builder: ${newName} with body cost: ${bodyCost} and body: ${body}`);
         }
       } else {
-        console.log(`Failed to spawn builder: ${result}. Available energy: ${this.getAvailableMaterials()}, Body cost: ${bodyCost}`);
+        console.log(`Failed to spawn builder: ${result}. Available energy: ${availableSpawn.room.energyAvailable}, Body cost: ${bodyCost}`);
       }
     }
   }

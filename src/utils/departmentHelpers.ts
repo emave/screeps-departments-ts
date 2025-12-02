@@ -74,6 +74,15 @@ export function getAvailableMaterials(materialsPercentage: number): number {
   return Math.floor(totalEnergy * materialsPercentage);
 }
 
+export function getAvailableMaterialsPerSpawn(materialsPercentage: number): { [spawnName: string]: number } {
+  const energyPerSpawn: { [spawnName: string]: number } = {};
+  for (const spawnName in Game.spawns) {
+    const spawn = Game.spawns[spawnName];
+    energyPerSpawn[spawnName] = Math.floor(spawn.room.energyAvailable * materialsPercentage);
+  }
+  return energyPerSpawn;
+}
+
 /**
  * Find an available (non-spawning) spawn
  */
